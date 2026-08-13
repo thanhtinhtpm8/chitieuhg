@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#1F6F5C" />
+<title>Sổ Chi Tiêu</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F6F5C'/%3E%3Cpath d='M14 24h36a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V28a4 4 0 0 1 4-4Z' fill='none' stroke='%23F5F4EF' stroke-width='3'/%3E%3Ccircle cx='44' cy='36' r='4' fill='%23F5F4EF'/%3E%3Cpath d='M10 24v-2a6 6 0 0 1 6-6h28' fill='none' stroke='%23F5F4EF' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#F5F4EF;
+    --surface:#FFFFFF;
+    --surface-2:#ECEBE3;
+    --ink:#1B241F;
+    --ink-soft:#5B6B61;
+    --line:#DEE3DB;
+    --accent:#1F6F5C;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#E1F0E9;
+    --success:#1F8A5A;
+    --success-soft:#E1F3E9;
+    --warning:#B5792A;
+    --warning-soft:#F7ECDD;
+    --danger:#C0392B;
+    --danger-soft:#FBE7E4;
+    --shadow:rgba(20,30,25,0.10);
+    --radius:16px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#121815;
+      --surface:#1B2420;
+      --surface-2:#212C27;
+      --ink:#EDF1EE;
+      --ink-soft:#9FB0A6;
+      --line:#2B3730;
+      --accent:#4FBE9B;
+      --accent-ink:#0C1512;
+      --accent-soft:#1E3A31;
+      --success:#48C08A;
+      --success-soft:#173B2A;
+      --warning:#E0A552;
+      --warning-soft:#3A2E18;
+      --danger:#E5776A;
+      --danger-soft:#3A211E;
+      --shadow:rgba(0,0,0,0.45);
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+    min-height:100vh;
+  }
+  .num{
+    font-family:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
+
+  .app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--bg);}
+
+  /* Header */
+  header.top{
+    position:sticky;top:0;z-index:20;
+    background:var(--bg);
+    padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 10px;
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  header.top h1{
+    font-size:19px;margin:0;font-weight:800;letter-spacing:-0.01em;
+    display:flex;align-items:center;gap:8px;
+  }
+  header.top h1 .mark{
+    width:26px;height:26px;border-radius:8px;background:var(--accent);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;
+  }
+  .icon-btn{
+    width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+    color:var(--ink-soft);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .icon-btn:active{background:var(--surface-2);}
+  .head-actions{display:flex;gap:8px;}
+
+  /* Summary strip */
+  .summary{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+    padding:12px 16px 4px;
+  }
+  .tile{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:10px 10px;display:flex;flex-direction:column;gap:2px;
+  }
+  .tile .label{font-size:11px;color:var(--ink-soft);font-weight:600;letter-spacing:.02em;}
+  .tile .value{font-size:15px;font-weight:800;}
+  .tile.remain .value{color:var(--warning);}
+  .tile.paid .value{color:var(--success);}
+
+  /* Filters */
+  .filters{
+    padding:10px 16px 6px;display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .filters::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto;padding:7px 13px;border-radius:999px;border:1px solid var(--line);
+    background:var(--surface);color:var(--ink-soft);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
+  }
+  .chip.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+
+  .search-row{padding:4px 16px 10px;display:flex;gap:8px;}
+  .search-row input[type="search"]{
+    flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);
+    color:var(--ink);font-size:14px;outline:none;
+  }
+  .search-row input::placeholder{color:var(--ink-soft);}
+  select.sort{
+    border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;
+    padding:0 10px;font-size:13px;
+  }
+
+  /* List */
+  main{flex:1;padding:2px 16px 100px;}
+  .empty, .loading, .error-banner{
+    margin-top:24px;text-align:center;color:var(--ink-soft);font-size:14px;padding:24px 16px;
+  }
+  .error-banner{
+    background:var(--danger-soft);color:var(--danger);border-radius:var(--radius);text-align:left;
+  }
+  .error-banner button{
+    margin-top:8px;background:var(--danger);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:13px;cursor:pointer;
+  }
+
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:10px;padding:12px 12px 12px 14px;position:relative;overflow:hidden;
+    display:flex;flex-direction:column;gap:6px;cursor:pointer;
+    box-shadow:0 1px 2px var(--shadow);
+  }
+  .card::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--status-color,var(--line));
+  }
+  .card .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .card .title{font-weight:700;font-size:15px;line-height:1.3;}
+  .card .desc{font-size:13px;color:var(--ink-soft);line-height:1.35;}
+  .card .amount{font-weight:800;font-size:15px;white-space:nowrap;}
+  .card .row2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;}
+  .pill{padding:3px 8px;border-radius:999px;font-weight:700;font-size:11.5px;}
+  .pill.done{background:var(--success-soft);color:var(--success);}
+  .pill.pending{background:var(--warning-soft);color:var(--warning);}
+  .pill.other{background:var(--surface-2);color:var(--ink-soft);}
+  .meta{color:var(--ink-soft);display:flex;align-items:center;gap:4px;}
+  .meta::before{content:"·";}
+  .row2 .meta:first-child::before{content:"";}
+  .remain-tag{font-weight:700;color:var(--warning);}
+
+  /* FAB */
+  .fab{
+    position:fixed;right:calc((100vw - min(100vw,480px))/2 + 18px);
+    bottom:calc(env(safe-area-inset-bottom,0px) + 80px);
+    width:56px;height:56px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+    border:none;box-shadow:0 6px 16px var(--shadow);font-size:26px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;z-index:30;
+  }
+
+  /* Bottom nav */
+  nav.tabbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:25;
+    max-width:480px;margin:0 auto;
+    background:var(--surface);border-top:1px solid var(--line);
+    display:flex;padding:6px 8px calc(env(safe-area-inset-bottom,0px) + 6px);
+  }
+  nav.tabbar button{
+    flex:1;background:none;border:none;color:var(--ink-soft);font-size:12px;font-weight:700;
+    display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;border-radius:10px;
+  }
+  nav.tabbar button .ic{font-size:18px;}
+  nav.tabbar button.active{color:var(--accent);}
+
+  /* Stats view */
+  .stats-section{margin-top:14px;}
+  .stats-section h3{font-size:13px;font-weight:800;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;}
+  .bar-row{margin-bottom:10px;}
+  .bar-row .bar-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;}
+  .bar-row .bar-top .name{font-weight:700;}
+  .bar-track{height:8px;border-radius:6px;background:var(--surface-2);overflow:hidden;}
+  .bar-fill{height:100%;border-radius:6px;background:var(--accent);}
+  .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
+
+  /* Modal / bottom sheet */
+  .overlay{
+    position:fixed;inset:0;background:rgba(10,14,12,0.5);z-index:50;display:none;
+    align-items:flex-end;justify-content:center;
+  }
+  .overlay.open{display:flex;}
+  .sheet{
+    width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;
+    padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);
+    max-height:92vh;overflow-y:auto;
+    animation:slideup .18s ease-out;
+  }
+  @keyframes slideup{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .sheet-handle{width:40px;height:4px;background:var(--line);border-radius:4px;margin:0 auto 12px;}
+  .sheet h2{font-size:17px;font-weight:800;margin:0 0 14px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px;}
+  .field input, .field textarea, .field select{
+    width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);
+    background:var(--bg);color:var(--ink);font-size:15px;font-family:inherit;outline:none;
+  }
+  .field textarea{resize:vertical;min-height:56px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .remain-preview{
+    background:var(--accent-soft);color:var(--accent);border-radius:12px;padding:10px 12px;
+    font-weight:700;font-size:14px;display:flex;justify-content:space-between;margin-bottom:14px;
+  }
+  .sheet-actions{display:flex;gap:10px;margin-top:6px;}
+  .btn{
+    flex:1;padding:13px;border-radius:12px;border:none;font-weight:800;font-size:15px;cursor:pointer;
+  }
+  .btn.primary{background:var(--accent);color:var(--accent-ink);}
+  .btn.ghost{background:var(--surface-2);color:var(--ink);}
+  .btn.danger{background:var(--danger-soft);color:var(--danger);}
+  .btn:disabled{opacity:.55;}
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);transform:translateX(-50%);
+    background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:13.5px;font-weight:600;
+    z-index:80;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:88%;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+  .toast.err{background:var(--danger);color:#fff;}
+
+  .spinner{
+    width:18px;height:18px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);
+    animation:spin .7s linear infinite;display:inline-block;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .center-row{display:flex;align-items:center;justify-content:center;gap:8px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <h1><span class="mark">₫</span>Sổ Chi Tiêu</h1>
+    <div class="head-actions">
+      <button class="icon-btn" id="refreshBtn" title="Làm mới">⟳</button>
+      <button class="icon-btn" id="settingsBtn" title="Cài đặt">⚙</button>
+    </div>
+  </header>
+
+  <!-- LIST VIEW -->
+  <div id="view-list">
+    <div class="summary">
+      <div class="tile total"><span class="label">TỔNG GIÁ</span><span class="value num" id="sumTotal">0 đ</span></div>
+      <div class="tile paid"><span class="label">ĐÃ THANH TOÁN</span><span class="value num" id="sumPaid">0 đ</span></div>
+      <div class="tile remain"><span class="label">CÒN LẠI</span><span class="value num" id="sumRemain">0 đ</span></div>
+    </div>
+
+    <div class="filters" id="statusFilters"></div>
+    <div class="search-row">
+      <label for="searchInput" class="sr-only">Tìm kiếm khoản chi</label>
+      <input type="search" id="searchInput" placeholder="Tìm nội dung, mô tả, người thanh toán…" />
+      <label for="sortSelect" class="sr-only">Sắp xếp</label>
+      <select class="sort" id="sortSelect">
+        <option value="new">Mới nhất</option>
+        <option value="remain">Còn lại cao nhất</option>
+        <option value="total">Tổng giá cao nhất</option>
+      </select>
+    </div>
+
+    <main id="listContainer"></main>
+  </div>
+
+  <!-- STATS VIEW -->
+  <div id="view-stats" style="display:none;">
+    <main style="padding-top:14px;">
+      <div class="stat-card">
+        <h3 style="margin-top:0;">Tổng quan</h3>
+        <div class="bar-row"><div class="bar-top"><span class="name">Tổng giá</span><span class="num" id="statTotal">0 đ</span></div></div>
+        <div class="bar-row"><div class="bar-top"><span class="name">Đã thanh toán</span><span class="num" id="statPaid">0 đ</span></div></div>
+        <div class="bar-row"><div class="bar-top"><span class="name">Còn phải trả</span><span class="num" id="statRemain">0 đ</span></div></div>
+        <div class="bar-row" style="margin-bottom:0;"><div class="bar-top"><span class="name">Số khoản</span><span class="num" id="statCount">0</span></div></div>
+      </div>
+
+      <div class="stats-section">
+        <h3>Theo trạng thái</h3>
+        <div id="statByStatus"></div>
+      </div>
+
+      <div class="stats-section">
+        <h3>Theo người thanh toán (còn lại)</h3>
+        <div id="statByPayer"></div>
+      </div>
+
+      <div class="stats-section">
+        <h3>Theo tháng nhập (tổng giá)</h3>
+        <div id="statByMonth"></div>
+      </div>
+    </main>
+  </div>
+
+  <button class="fab" id="fabAdd">+</button>
+
+  <nav class="tabbar">
+    <button class="active" id="tabList"><span class="ic">📋</span>Danh sách</button>
+    <button id="tabStats"><span class="ic">📊</span>Thống kê</button>
+  </nav>
+</div>
+
+<!-- Add/Edit sheet -->
+<div class="overlay" id="formOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="formTitle">Thêm khoản chi</h2>
+    <form id="itemForm">
+      <div class="field">
+        <label for="fNoiDung">Nội dung *</label>
+        <input type="text" id="fNoiDung" required maxlength="120" placeholder="VD: Tiền phòng tháng 8" />
+      </div>
+      <div class="field">
+        <label for="fMoTa">Mô tả</label>
+        <textarea id="fMoTa" maxlength="500" placeholder="Ghi chú thêm (không bắt buộc)"></textarea>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label for="fTongGia">Tổng giá *</label>
+          <input type="number" id="fTongGia" inputmode="decimal" min="0" step="1000" required placeholder="0" />
+        </div>
+        <div class="field">
+          <label for="fDaCoc">Đã cọc / đã trả</label>
+          <input type="number" id="fDaCoc" inputmode="decimal" min="0" step="1000" placeholder="0" />
+        </div>
+      </div>
+      <div class="remain-preview">
+        <span>Còn lại</span><span class="num" id="fRemainPreview">0 đ</span>
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label for="fTrangThai">Trạng thái</label>
+          <select id="fTrangThai">
+            <option value="Chưa hoàn thành">Chưa hoàn thành</option>
+            <option value="Hoàn thành">Hoàn thành</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fNgayNhap">Ngày nhập</label>
+          <input type="date" id="fNgayNhap" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="fNguoiThanhToan">Người thanh toán</label>
+        <input type="text" id="fNguoiThanhToan" list="payerOptions" placeholder="Tên người thanh toán" />
+        <datalist id="payerOptions"></datalist>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" id="deleteBtn" style="display:none;">Xóa</button>
+        <button type="button" class="btn ghost" id="cancelFormBtn">Hủy</button>
+        <button type="submit" class="btn primary" id="saveBtn">Lưu</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="overlay" id="settingsOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Cài đặt kết nối</h2>
+    <div class="field">
+      <label for="apiUrlInput">URL Web App (Apps Script)</label>
+      <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec" />
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost ping" id="pingBtn">Kiểm tra</button>
+      <button type="button" class="btn primary" id="saveSettingsBtn">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxNDXZXPv-wf3--MrLMt4wDZDGECn0wrhKhYLh4fxRU0yH17dxSuZxga3dxtiitwEWHmQ/exec";
+  var LS_KEY = "chitieu_api_url";
+
+  var state = {
+    apiUrl: localStorage.getItem(LS_KEY) || DEFAULT_API_URL,
+    items: [],
+    loading: false,
+    error: null,
+    statusFilter: "all",
+    search: "",
+    sort: "new",
+    editingId: null,
+    tab: "list"
+  };
+
+  // ---------- helpers ----------
+  function formatMoney(n){
+    n = Number(n) || 0;
+    return n.toLocaleString("vi-VN") + " đ";
+  }
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function ddmmyyyyToInput(s){
+    if(!s) return "";
+    var m = String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(!m) return "";
+    return m[3] + "-" + m[2].padStart(2,"0") + "-" + m[1].padStart(2,"0");
+  }
+  function inputToDdmmyyyy(s){
+    if(!s) return "";
+    var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!m) return s;
+    return m[3] + "/" + m[2] + "/" + m[1];
+  }
+  function todayInputValue(){
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function isDoneStatus(s){
+    return /hoàn thành/i.test(s || "") && !/chưa/i.test(s || "");
+  }
+  function isCancelStatus(s){
+    return /hủy|huỷ/i.test(s || "");
+  }
+  function statusColor(s){
+    if(isCancelStatus(s)) return "var(--danger)";
+    if(isDoneStatus(s)) return "var(--success)";
+    return "var(--warning)";
+  }
+  function statusPillClass(s){
+    if(isCancelStatus(s)) return "other";
+    if(isDoneStatus(s)) return "done";
+    return "pending";
+  }
+  function showToast(msg, isErr){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "toast show" + (isErr ? " err" : "");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ t.className = "toast"; }, 2600);
+  }
+
+  // ---------- API ----------
+  function apiCall(action, payload){
+    var url = state.apiUrl + "?action=" + encodeURIComponent(action);
+    if(payload) url += "&payload=" + encodeURIComponent(JSON.stringify(payload));
+    return fetch(url, { method: "GET" })
+      .then(function(res){
+        if(!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function(json){
+        if(!json.ok) throw new Error(json.error || "Lỗi không xác định từ server");
+        return json.data;
+      });
+  }
+
+  function loadData(){
+    state.loading = true;
+    state.error = null;
+    render();
+    return apiCall("list")
+      .then(function(data){
+        state.items = Array.isArray(data) ? data : [];
+        state.loading = false;
+        render();
+      })
+      .catch(function(err){
+        state.loading = false;
+        state.error = err.message;
+        render();
+      });
+  }
+
+  // ---------- derived data ----------
+  function getFilteredSortedItems(){
+    var items = state.items.slice();
+    if(state.statusFilter !== "all"){
+      items = items.filter(function(it){ return (it.trangThai || "(Chưa đặt)") === state.statusFilter; });
+    }
+    if(state.search.trim()){
+      var q = state.search.trim().toLowerCase();
+      items = items.filter(function(it){
+        return (it.noiDung||"").toLowerCase().indexOf(q) > -1 ||
+               (it.moTa||"").toLowerCase().indexOf(q) > -1 ||
+               (it.nguoiThanhToan||"").toLowerCase().indexOf(q) > -1;
+      });
+    }
+    if(state.sort === "remain"){
+      items.sort(function(a,b){ return b.conLai - a.conLai; });
+    } else if(state.sort === "total"){
+      items.sort(function(a,b){ return b.tongGia - a.tongGia; });
+    } else {
+      items.sort(function(a,b){ return b.id - a.id; });
+    }
+    return items;
+  }
+
+  function distinctStatuses(){
+    var set = {};
+    state.items.forEach(function(it){ set[it.trangThai || "(Chưa đặt)"] = true; });
+    return Object.keys(set);
+  }
+  function distinctPayers(){
+    var set = {};
+    state.items.forEach(function(it){ if(it.nguoiThanhToan) set[it.nguoiThanhToan] = true; });
+    return Object.keys(set);
+  }
+
+  // ---------- render: list view ----------
+  function renderSummaryTiles(){
+    var total = 0, paid = 0;
+    state.items.forEach(function(it){ total += it.tongGia; paid += it.daCoc; });
+    document.getElementById("sumTotal").textContent = formatMoney(total);
+    document.getElementById("sumPaid").textContent = formatMoney(paid);
+    document.getElementById("sumRemain").textContent = formatMoney(total - paid);
+  }
+
+  function renderFilters(){
+    var el = document.getElementById("statusFilters");
+    var statuses = distinctStatuses();
+    var html = '<div class="chip' + (state.statusFilter==="all"?" active":"") + '" data-status="all">Tất cả (' + state.items.length + ')</div>';
+    statuses.forEach(function(s){
+      var count = state.items.filter(function(it){ return (it.trangThai||"(Chưa đặt)") === s; }).length;
+      html += '<div class="chip' + (state.statusFilter===s?" active":"") + '" data-status="' + escapeHtml(s) + '">' + escapeHtml(s) + ' (' + count + ')</div>';
+    });
+    el.innerHTML = html;
+    Array.prototype.forEach.call(el.querySelectorAll(".chip"), function(chip){
+      chip.addEventListener("click", function(){
+        state.statusFilter = chip.getAttribute("data-status");
+        renderFilters();
+        renderList();
+      });
+    });
+  }
+
+  function renderList(){
+    var container = document.getElementById("listContainer");
+    if(state.loading){
+      container.innerHTML = '<div class="loading center-row"><span class="spinner"></span>Đang tải…</div>';
+      return;
+    }
+    if(state.error){
+      container.innerHTML = '<div class="error-banner">Không thể tải dữ liệu: ' + escapeHtml(state.error) +
+        '<br><button id="retryBtn">Thử lại</button></div>';
+      document.getElementById("retryBtn").addEventListener("click", loadData);
+      return;
+    }
+    var items = getFilteredSortedItems();
+    if(!items.length){
+      container.innerHTML = '<div class="empty">Chưa có khoản chi nào phù hợp.<br>Nhấn "+" để thêm mới.</div>';
+      return;
+    }
+    container.innerHTML = items.map(function(it){
+      var status = it.trangThai || "(Chưa đặt)";
+      return '<div class="card" data-id="' + it.id + '" style="--status-color:' + statusColor(status) + '">' +
+        '<div class="row1">' +
+          '<div class="title">' + escapeHtml(it.noiDung) + '</div>' +
+          '<div class="amount num">' + formatMoney(it.tongGia) + '</div>' +
+        '</div>' +
+        (it.moTa ? '<div class="desc">' + escapeHtml(it.moTa) + '</div>' : '') +
+        '<div class="row2">' +
+          '<span class="pill ' + statusPillClass(status) + '">' + escapeHtml(status) + '</span>' +
+          (it.nguoiThanhToan ? '<span class="meta">' + escapeHtml(it.nguoiThanhToan) + '</span>' : '') +
+          (it.ngayNhap ? '<span class="meta">' + escapeHtml(it.ngayNhap) + '</span>' : '') +
+          (it.conLai > 0 ? '<span class="meta remain-tag num">Còn ' + formatMoney(it.conLai) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+    }).join("");
+    Array.prototype.forEach.call(container.querySelectorAll(".card"), function(card){
+      card.addEventListener("click", function(){
+        openEditForm(parseInt(card.getAttribute("data-id"), 10));
+      });
+    });
+  }
+
+  // ---------- render: stats view ----------
+  function renderStats(){
+    var items = state.items;
+    var total = 0, paid = 0;
+    items.forEach(function(it){ total += it.tongGia; paid += it.daCoc; });
+    document.getElementById("statTotal").textContent = formatMoney(total);
+    document.getElementById("statPaid").textContent = formatMoney(paid);
+    document.getElementById("statRemain").textContent = formatMoney(total - paid);
+    document.getElementById("statCount").textContent = String(items.length);
+
+    function barList(groups, valueKey, containerId, colorFn){
+      var el = document.getElementById(containerId);
+      var max = Math.max.apply(null, groups.map(function(g){ return g[valueKey]; }).concat([1]));
+      if(!groups.length){ el.innerHTML = '<div class="empty" style="padding:8px 0;">Chưa có dữ liệu</div>'; return; }
+      el.innerHTML = groups.map(function(g){
+        var pct = Math.round((g[valueKey] / max) * 100);
+        return '<div class="bar-row">' +
+          '<div class="bar-top"><span class="name">' + escapeHtml(g.name) + '</span><span class="num">' + formatMoney(g[valueKey]) + '</span></div>' +
+          '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:' + (colorFn ? colorFn(g.name) : "var(--accent)") + '"></div></div>' +
+        '</div>';
+      }).join("");
+    }
+
+    // by status: sum tongGia
+    var byStatus = {};
+    items.forEach(function(it){
+      var k = it.trangThai || "(Chưa đặt)";
+      byStatus[k] = (byStatus[k] || 0) + it.tongGia;
+    });
+    var statusGroups = Object.keys(byStatus).map(function(k){ return {name:k, val: byStatus[k]}; })
+      .sort(function(a,b){ return b.val - a.val; });
+    barList(statusGroups, "val", "statByStatus", statusColor);
+
+    // by payer: sum conLai
+    var byPayer = {};
+    items.forEach(function(it){
+      if(!it.nguoiThanhToan) return;
+      byPayer[it.nguoiThanhToan] = (byPayer[it.nguoiThanhToan] || 0) + it.conLai;
+    });
+    var payerGroups = Object.keys(byPayer).map(function(k){ return {name:k, val: byPayer[k]}; })
+      .filter(function(g){ return g.val > 0; })
+      .sort(function(a,b){ return b.val - a.val; });
+    barList(payerGroups, "val", "statByPayer");
+
+    // by month (from ngayNhap dd/mm/yyyy): sum tongGia
+    var byMonth = {};
+    items.forEach(function(it){
+      var m = String(it.ngayNhap || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      var key = m ? (m[2].padStart(2,"0") + "/" + m[3]) : "Không rõ";
+      byMonth[key] = (byMonth[key] || 0) + it.tongGia;
+    });
+    var monthGroups = Object.keys(byMonth).map(function(k){ return {name:k, val: byMonth[k]}; })
+      .sort(function(a,b){
+        if(a.name === "Không rõ") return 1;
+        if(b.name === "Không rõ") return -1;
+        return b.name.localeCompare(a.name);
+      });
+    barList(monthGroups, "val", "statByMonth");
+  }
+
+  function render(){
+    renderSummaryTiles();
+    renderFilters();
+    renderList();
+    if(state.tab === "stats") renderStats();
+  }
+
+  // ---------- form (add/edit) ----------
+  function refreshDatalists(){
+    var payerEl = document.getElementById("payerOptions");
+    payerEl.innerHTML = distinctPayers().map(function(p){ return '<option value="' + escapeHtml(p) + '"></option>'; }).join("");
+  }
+
+  function updateRemainPreview(){
+    var tong = Number(document.getElementById("fTongGia").value) || 0;
+    var coc = Number(document.getElementById("fDaCoc").value) || 0;
+    document.getElementById("fRemainPreview").textContent = formatMoney(tong - coc);
+  }
+
+  function syncPaidWithStatus(){
+    var statusEl = document.getElementById("fTrangThai");
+    if(!isDoneStatus(statusEl.value)) return;
+    var tongEl = document.getElementById("fTongGia");
+    document.getElementById("fDaCoc").value = tongEl.value || 0;
+    updateRemainPreview();
+  }
+
+  function openAddForm(){
+    state.editingId = null;
+    document.getElementById("formTitle").textContent = "Thêm khoản chi";
+    document.getElementById("itemForm").reset();
+    document.getElementById("fNgayNhap").value = todayInputValue();
+    document.getElementById("fTrangThai").value = "Chưa hoàn thành";
+    document.getElementById("deleteBtn").style.display = "none";
+    refreshDatalists();
+    updateRemainPreview();
+    document.getElementById("formOverlay").classList.add("open");
+  }
+
+  function openEditForm(id){
+    var it = state.items.find(function(x){ return x.id === id; });
+    if(!it) return;
+    state.editingId = id;
+    document.getElementById("formTitle").textContent = "Sửa khoản chi";
+    document.getElementById("fNoiDung").value = it.noiDung || "";
+    document.getElementById("fMoTa").value = it.moTa || "";
+    document.getElementById("fTongGia").value = it.tongGia || "";
+    document.getElementById("fDaCoc").value = it.daCoc || "";
+    document.getElementById("fTrangThai").value = isDoneStatus(it.trangThai) ? "Hoàn thành" : "Chưa hoàn thành";
+    document.getElementById("fNguoiThanhToan").value = it.nguoiThanhToan || "";
+    document.getElementById("fNgayNhap").value = ddmmyyyyToInput(it.ngayNhap) || todayInputValue();
+    document.getElementById("deleteBtn").style.display = "block";
+    refreshDatalists();
+    updateRemainPreview();
+    document.getElementById("formOverlay").classList.add("open");
+  }
+
+  function closeForm(){
+    document.getElementById("formOverlay").classList.remove("open");
+  }
+
+  function collectFormPayload(){
+    return {
+      noiDung: document.getElementById("fNoiDung").value.trim(),
+      moTa: document.getElementById("fMoTa").value.trim(),
+      tongGia: Number(document.getElementById("fTongGia").value) || 0,
+      daCoc: Number(document.getElementById("fDaCoc").value) || 0,
+      trangThai: document.getElementById("fTrangThai").value.trim() || "Chưa hoàn thành",
+      nguoiThanhToan: document.getElementById("fNguoiThanhToan").value.trim(),
+      ngayNhap: inputToDdmmyyyy(document.getElementById("fNgayNhap").value)
+    };
+  }
+
+  function submitForm(ev){
+    ev.preventDefault();
+    var payload = collectFormPayload();
+    if(!payload.noiDung){ showToast("Vui lòng nhập nội dung", true); return; }
+    var saveBtn = document.getElementById("saveBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Đang lưu…";
+    var action, apiPayload;
+    if(state.editingId){
+      action = "update";
+      apiPayload = Object.assign({ id: state.editingId }, payload);
+    } else {
+      action = "add";
+      apiPayload = payload;
+    }
+    apiCall(action, apiPayload)
+      .then(function(data){
+        state.items = Array.isArray(data) ? data : [];
+        closeForm();
+        showToast(state.editingId ? "Đã cập nhật" : "Đã thêm khoản chi");
+        render();
+      })
+      .catch(function(err){ showToast("Lỗi: " + err.message, true); })
+      .finally(function(){
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Lưu";
+      });
+  }
+
+  function handleDelete(){
+    if(!state.editingId) return;
+    if(!confirm("Xóa khoản chi này? Hành động không thể hoàn tác.")) return;
+    var id = state.editingId;
+    apiCall("delete", { id: id })
+      .then(function(data){
+        state.items = Array.isArray(data) ? data : [];
+        closeForm();
+        showToast("Đã xóa");
+        render();
+      })
+      .catch(function(err){ showToast("Lỗi: " + err.message, true); });
+  }
+
+  // ---------- settings ----------
+  function openSettings(){
+    document.getElementById("apiUrlInput").value = state.apiUrl;
+    document.getElementById("settingsOverlay").classList.add("open");
+  }
+  function closeSettings(){
+    document.getElementById("settingsOverlay").classList.remove("open");
+  }
+  function saveSettings(){
+    var url = document.getElementById("apiUrlInput").value.trim();
+    if(!url){ showToast("Vui lòng nhập URL", true); return; }
+    state.apiUrl = url;
+    localStorage.setItem(LS_KEY, url);
+    closeSettings();
+    showToast("Đã lưu cài đặt");
+    loadData();
+  }
+  function pingApi(){
+    var pingBtn = document.getElementById("pingBtn");
+    var tryUrl = document.getElementById("apiUrlInput").value.trim() || state.apiUrl;
+    var backupUrl = state.apiUrl;
+    state.apiUrl = tryUrl;
+    pingBtn.disabled = true;
+    pingBtn.textContent = "Đang kiểm tra…";
+    apiCall("ping")
+      .then(function(){ showToast("Kết nối thành công ✓"); })
+      .catch(function(err){ showToast("Kết nối lỗi: " + err.message, true); })
+      .finally(function(){
+        state.apiUrl = backupUrl;
+        pingBtn.disabled = false;
+        pingBtn.textContent = "Kiểm tra";
+      });
+  }
+
+  // ---------- tabs ----------
+  function switchTab(tab){
+    state.tab = tab;
+    document.getElementById("view-list").style.display = tab === "list" ? "" : "none";
+    document.getElementById("view-stats").style.display = tab === "stats" ? "" : "none";
+    document.getElementById("fabAdd").style.display = tab === "list" ? "" : "none";
+    document.getElementById("tabList").classList.toggle("active", tab === "list");
+    document.getElementById("tabStats").classList.toggle("active", tab === "stats");
+    if(tab === "stats") renderStats();
+  }
+
+  // ---------- wire up ----------
+  document.getElementById("refreshBtn").addEventListener("click", loadData);
+  document.getElementById("settingsBtn").addEventListener("click", openSettings);
+  document.getElementById("fabAdd").addEventListener("click", openAddForm);
+  document.getElementById("cancelFormBtn").addEventListener("click", closeForm);
+  document.getElementById("itemForm").addEventListener("submit", submitForm);
+  document.getElementById("deleteBtn").addEventListener("click", handleDelete);
+  document.getElementById("fTongGia").addEventListener("input", function(){ updateRemainPreview(); syncPaidWithStatus(); });
+  document.getElementById("fDaCoc").addEventListener("input", updateRemainPreview);
+  document.getElementById("fTrangThai").addEventListener("change", syncPaidWithStatus);
+  document.getElementById("formOverlay").addEventListener("click", function(e){ if(e.target === this) closeForm(); });
+  document.getElementById("settingsOverlay").addEventListener("click", function(e){ if(e.target === this) closeSettings(); });
+  document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);
+  document.getElementById("pingBtn").addEventListener("click", pingApi);
+  document.getElementById("tabList").addEventListener("click", function(){ switchTab("list"); });
+  document.getElementById("tabStats").addEventListener("click", function(){ switchTab("stats"); });
+
+  var searchDebounce;
+  document.getElementById("searchInput").addEventListener("input", function(e){
+    clearTimeout(searchDebounce);
+    var val = e.target.value;
+    searchDebounce = setTimeout(function(){ state.search = val; renderList(); }, 200);
+  });
+  document.getElementById("sortSelect").addEventListener("change", function(e){
+    state.sort = e.target.value;
+    renderList();
+  });
+
+  loadData();
+})();
+</script>
+</body>
+</html>
