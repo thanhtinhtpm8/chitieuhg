@@ -312,8 +312,12 @@
     width:18px;height:18px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);
     animation:spin .7s linear infinite;display:inline-block;
   }
+  .spinner.tiny{width:13px;height:13px;border-width:2px;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .center-row{display:flex;align-items:center;justify-content:center;gap:8px;}
+  .sync-banner{
+    display:flex;align-items:center;gap:7px;padding:8px 16px 0;color:var(--ink-soft);font-size:12.5px;font-weight:600;
+  }
 </style>
 </head>
 <body>
@@ -366,6 +370,7 @@
       </select>
     </div>
 
+    <div class="sync-banner" id="syncBanner" style="display:none;"><span class="spinner tiny"></span>Đang đồng bộ dữ liệu mới…</div>
     <main id="listContainer"></main>
   </div>
 
@@ -507,11 +512,19 @@
   var DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxNDXZXPv-wf3--MrLMt4wDZDGECn0wrhKhYLh4fxRU0yH17dxSuZxga3dxtiitwEWHmQ/exec";
   var LS_KEY = "chitieu_api_url";
   var LS_PAYER_KEY = "chitieu_last_payer";
+  var LS_ITEMS_KEY = "chitieu_cache_items";
+
+  var cachedItems = [];
+  try{
+    var parsedCache = JSON.parse(localStorage.getItem(LS_ITEMS_KEY) || "null");
+    if(Array.isArray(parsedCache)) cachedItems = parsedCache;
+  }catch(e){}
 
   var state = {
     apiUrl: localStorage.getItem(LS_KEY) || DEFAULT_API_URL,
-    items: [],
+    items: cachedItems,
     loading: false,
+    syncing: false,
     error: null,
     statusFilter: "all",
     search: "",
@@ -585,19 +598,28 @@
       });
   }
 
+  function persistCache(){
+    try{ localStorage.setItem(LS_ITEMS_KEY, JSON.stringify(state.items)); }catch(e){}
+  }
+
   function loadData(){
-    state.loading = true;
+    var hasCache = state.items.length > 0;
     state.error = null;
+    if(hasCache){ state.syncing = true; } else { state.loading = true; }
     render();
     return apiCall("list")
       .then(function(data){
         state.items = Array.isArray(data) ? data : [];
         state.loading = false;
+        state.syncing = false;
+        persistCache();
         render();
       })
       .catch(function(err){
         state.loading = false;
-        state.error = err.message;
+        state.syncing = false;
+        if(hasCache){ showToast("Không thể đồng bộ: " + err.message, true); }
+        else { state.error = err.message; }
         render();
       });
   }
@@ -661,11 +683,12 @@
 
   function renderList(){
     var container = document.getElementById("listContainer");
-    if(state.loading){
+    document.getElementById("syncBanner").style.display = state.syncing ? "flex" : "none";
+    if(state.loading && !state.items.length){
       container.innerHTML = '<div class="loading center-row"><span class="spinner"></span>Đang tải…</div>';
       return;
     }
-    if(state.error){
+    if(state.error && !state.items.length){
       container.innerHTML = '<div class="error-banner">Không thể tải dữ liệu: ' + escapeHtml(state.error) +
         '<br><button id="retryBtn">Thử lại</button></div>';
       document.getElementById("retryBtn").addEventListener("click", loadData);
@@ -849,6 +872,7 @@
     apiCall(action, apiPayload)
       .then(function(data){
         state.items = Array.isArray(data) ? data : [];
+        persistCache();
         closeForm();
         showToast(state.editingId ? "Đã cập nhật" : "Đã thêm khoản chi");
         render();
@@ -867,6 +891,7 @@
     apiCall("delete", { id: id })
       .then(function(data){
         state.items = Array.isArray(data) ? data : [];
+        persistCache();
         closeForm();
         showToast("Đã xóa");
         render();
