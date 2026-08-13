@@ -506,6 +506,7 @@
 
   var DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxNDXZXPv-wf3--MrLMt4wDZDGECn0wrhKhYLh4fxRU0yH17dxSuZxga3dxtiitwEWHmQ/exec";
   var LS_KEY = "chitieu_api_url";
+  var LS_PAYER_KEY = "chitieu_last_payer";
 
   var state = {
     apiUrl: localStorage.getItem(LS_KEY) || DEFAULT_API_URL,
@@ -788,6 +789,7 @@
     document.getElementById("fNgayNhap").value = today;
     document.getElementById("entryDateText").textContent = inputToDdmmyyyy(today);
     document.getElementById("fTrangThai").value = "Chưa hoàn thành";
+    document.getElementById("fNguoiThanhToan").value = localStorage.getItem(LS_PAYER_KEY) || "";
     document.getElementById("deleteBtn").style.display = "none";
     updateRemainPreview();
     document.getElementById("formOverlay").classList.add("open");
@@ -832,6 +834,7 @@
     ev.preventDefault();
     var payload = collectFormPayload();
     if(!payload.noiDung){ showToast("Vui lòng nhập nội dung", true); return; }
+    if(payload.nguoiThanhToan) localStorage.setItem(LS_PAYER_KEY, payload.nguoiThanhToan);
     var saveBtn = document.getElementById("saveBtn");
     saveBtn.disabled = true;
     saveBtn.textContent = "Đang lưu…";
